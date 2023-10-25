@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Usage: bash-trash restore [filename...]
+# Summary: Restore trash files
+set -euo pipefail
+if [[ -n "${DEBUG:+1}" ]]; then
+	set -x
+fi
+
+_bash_trash_restore() {
+	local trash_path="${HOME}/.local/share/Trash"
+	local files_path="${trash_path}/files"
+	local info_path="${trash_path}/info"
+
+	local name_selected="${1##* | }"
+	if [[ ! -r "${files_path}/${name_selected}" ]] || [[ ! -r "${info_path}/${name_selected}.trashinfo" ]]; then
+		echo "bash-trash: selected file does not exist in trash" >&2
+		return 1
+	fi
+
+	local path_selected="$(
+		grep 'Path=' "${info_path}/${name_selected}.trashinfo" |
+			sed 's/Path=//' |
+			sed 's/%20/ /g'
+	)" 2>/dev/null
+
+	# Ensure that the restored file's parent directories exist
+	if [[ ! -d "${path_selected%/*}" ]]; then
+		mkdir -p "${path_selected%/*}" 2>/dev/null || exit 1
+	fi
+
+	# Restore file, appending the ~restored suffix if there is a conflict
+	mv \
+		--suffix=~restored \
+		"${files_path}/${name_selected}" \
+		"${path_selected}" \
+		2>/dev/null || exit 1
+
+	# Delete the record of the trash file
+	rm "${info_path}/${name_selected}.trashinfo"
+}
+
+if [[ $# -gt 0 ]]; then
+	for filename in "${@}"; do _bash_trash_restore "${filename}"; done
+else
+	bash-trash ls --no-fzf |
+		fzf -i -e +s -m --bind=ctrl-o:toggle-all --header "Tab: toggle, C-o: toggle-all" |
+		while read -r line; do _bash_trash_restore "${line}"; done
+fi

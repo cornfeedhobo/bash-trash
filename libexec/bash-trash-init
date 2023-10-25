@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Usage: bash-trash init
+# Summary: Outputs shell commands for initializing bash-trash
+set -euo pipefail
+if [[ -n "${DEBUG:+1}" ]]; then
+	set -x
+fi
+
+print=""
+if [[ "${1:-}" == "-" ]]; then
+	print=1
+	shift
+fi
+
+shell="${1:-}"
+if [[ -z "${shell}" ]]; then
+	shell="$(basename "${SHELL}")"
+fi
+
+if [[ -z "${print}" ]]; then
+	case "${shell}" in
+	bash)
+		# shellcheck disable=2088
+		profile='~/.bash_profile'
+		;;
+	zsh)
+		# shellcheck disable=2088
+		profile='~/.zshenv'
+		;;
+	*)
+		profile='your profile'
+		;;
+	esac
+
+	{
+		echo "# Load bash-trash automatically by adding"
+		echo "# the following to ${profile}:"
+		echo
+		echo "eval \"\$(${BASH_TRASH_ROOT}/bin/bash-trash init -)\""
+		echo
+	} >&2
+
+	exit 1
+fi
+
+root="$(abs_dirname "$(abs_dirname "${0}")")"
+
+echo "export PATH=\"\${PATH}:${BASH_TRASH_ROOT}/bin\""
+
+if [[ -r "${root}/completions/bash-trash.${shell}" ]]; then
+	echo "source ${root}/completions/bash-trash.${shell}"
+fi

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ -n "${DEBUG:+1}" ]]; then
+	set -x
+fi
+
+resolve_link() {
+	local path="${1:?usage: resolve_link <path>}"
+	$(type -p greadlink readlink | head -1) "${path}"
+}
+
+abs_dirname() {
+	local path="${1:?usage: abs_dirname <path>}"
+	if [[ -d "${path}" ]]; then
+		path="${path}/../"
+	fi
+	local cwd="$(pwd)"
+	while [[ -n "$path" ]]; do
+		cd "${path%/*}" 2>/dev/null || true
+		local name="${path##*/}"
+		path="$(resolve_link "${name}" 2>/dev/null || true)"
+	done
+	pwd
+	cd "$cwd" || exit 1
+}
+
+abs_path() {
+	local path="${1:?usage: abs_path <path>}"
+	if type -p realpath >/dev/null; then
+		realpath "${path}"
+	else
+		echo "$(abs_dirname "${path}")/${1##*/}"
+	fi
+}
+
+libexec_path="$(abs_dirname "${0}")"
+export BASH_TRASH_ROOT="${BASH_TRASH_ROOT:-$(abs_dirname "${libexec_path}")}"
+export PATH="${libexec_path}:${PATH}"
+
+command="${1:-}"
+case "${command}" in
+"" | "-h" | "--help")
+	source bash-trash-help
+	;;
+*)
+	command_path="$(command -v "bash-trash-${command}" || true)"
+	if [[ ! -x "$command_path" ]]; then
+		echo "bash-trash: no such command \`${command}'" >&2
+		exit 1
+	fi
+	shift
+	# shellcheck disable=1090
+	source "${command_path}" "${@}"
+	;;
+esac

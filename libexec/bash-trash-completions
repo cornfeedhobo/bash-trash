@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Usage: bash-trash completions COMMAND [arg1 arg2...]
+# Summary: Returns completions for the given bash-trash command
+# provide bash-trash completions
+set -euo pipefail
+if [[ -n "${DEBUG:+1}" ]]; then
+	set -x
+fi
+
+if [[ "${1:-}" == '--complete' ]]; then
+	exec bash-trash-commands
+fi
+
+COMMAND="${1:-}"
+if [[ -z "${COMMAND}" ]] || ! command -v "bash-trash-${COMMAND}" >/dev/null; then
+	echo "usage: bash-trash completions COMMAND [arg1 arg2...]" >&2
+	exit 1
+fi
+
+COMMAND_PATH="$(command -v "bash-trash-${COMMAND}")"
+if grep -i "^# provide bash-trash completions" "${COMMAND_PATH}" >/dev/null; then
+	shift
+	exec "${COMMAND_PATH}" --complete "${@}"
+fi

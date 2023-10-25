@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Usage: bash-trash lsd [--no-fzf]
+# Summary: List all trash files in the current directory
+set -euo pipefail
+if [[ -n "${DEBUG:+1}" ]]; then
+	set -x
+fi
+
+_bash_trash_lsd() {
+	bash-trash ls --no-fzf | { grep "${PWD}" || true; }
+}
+
+if [[ "${1:-}" == '--no-fzf' ]]; then
+	_bash_trash_lsd
+else
+	_bash_trash_lsd | fzf -i -e +s
+fi

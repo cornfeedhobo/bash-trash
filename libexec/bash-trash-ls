@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Usage: bash-trash ls [--no-fzf]
+# Summary: List all trash files
+set -euo pipefail
+if [[ -n "${DEBUG:+1}" ]]; then
+	set -x
+fi
+
+_bash_trash_ls() {
+	local trash_dir="${HOME}/.local/share/Trash"
+	local trash_files_dir="${trash_dir}/files"
+	local trash_info_dir="${trash_dir}/info"
+
+	test -d "${trash_files_dir}" || mkdir -p "${trash_files_dir}" || exit 1
+	test -d "${trash_info_dir}" || mkdir -p "${trash_info_dir}" || exit 1
+
+	for item in "${trash_files_dir}"/*; do
+		name="${item#"${trash_files_dir}"/}"
+
+		if [[ "${name}" == '*' ]]; then
+			continue
+		fi
+
+		if [[ -d "${item}" ]]; then
+			dir_or_file='D'
+		else
+			dir_or_file='F'
+		fi
+
+		path="$(
+			grep 'Path=' "${trash_info_dir}/${name}.trashinfo" |
+				sed 's/Path=//' |
+				sed 's/%20/ /g'
+		)" 2>/dev/null
+
+		time="$(
+			grep 'DeletionDate=' "${trash_info_dir}/${name}.trashinfo" |
+				sed 's/DeletionDate=//' |
+				sed 's/T/ /'
+		)" 2>/dev/null
+
+		echo "${time} ${dir_or_file} ${path} | ${name}"
+	done | sort -r
+}
+
+if [[ "${1:-}" == '--no-fzf' ]]; then
+	_bash_trash_ls
+else
+	_bash_trash_ls | fzf -i -e +s
+fi

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# shellcheck disable=2086,2295
+# Usage: bash-trash commands
+# Summary: List all bash-trash commands
+set -euo pipefail
+if [[ -n "${DEBUG:+1}" ]]; then
+	set -x
+fi
+
+shopt -s nullglob
+
+{
+	for path in ${PATH//:/$'\n'}; do
+		for command in "${path}/bash-trash-"*; do
+			command="${command##${path}/bash-trash-}"
+			echo "${command##sh-}"
+		done
+	done
+} | sort | uniq

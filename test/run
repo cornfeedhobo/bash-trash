@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -e
+
+export PROJECT_ROOT="$( cd "$( dirname "${0}" )/../" >/dev/null 2>&1 && pwd )"
+export PATH="${PROJECT_ROOT}/bin:foobar:${PATH}"
+
+case "${PWD##*/}" in
+test) default='.' ;;
+bash-trash) default='test' ;;
+*) default='' ;;
+esac
+
+exec \
+	"$( cd "$( dirname "${0}" )" >/dev/null 2>&1 && pwd )/bats/bin/bats" \
+	${CI:+--tap} \
+	"${@:-${default}}"
